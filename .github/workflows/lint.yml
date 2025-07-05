@@ -31,7 +31,16 @@ jobs:
                 }
                 fi
             done
-          
+
+      - name: Test httpbin GET endpoint
+        run: |
+          kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
+          POD_NAME=$(kubectl get pods -l app=httpbin -n httpbin -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec -n httpbin "$POD_NAME" -- curl -s -f http://localhost:80/get || {
+            echo "❌ GET request failed. httpbin Deployment is not running"
+            exit 1
+          }
+
       - name: Set outputs
         id: cluster-info
         run: |
