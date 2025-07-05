@@ -3,7 +3,7 @@
 # kubesec-scan.sh - Scan Kubernetes manifests for critical security issues
 # Usage: ./kubesec-scan.sh [directory]
 
-set -euo pipefail
+set -e
 
 SCAN_DIR="${1:-.}"
 CRITICAL_FOUND=false
