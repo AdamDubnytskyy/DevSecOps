@@ -6,6 +6,6 @@
 ## Requirements
 [Step 1](docs/step1-create-kubernetes-deployment/README.md). Create a Kubernetes deployment. ✅
 
-[Step 2](). Ensure the deployment is evenly distributed across the cluster.
+[Step 2](). Ensure the deployment is evenly distributed across the cluster. ✅
 
 [Step 3](). Follow Kubernetes, container, and security best practices.
