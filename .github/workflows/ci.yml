@@ -77,14 +77,10 @@ jobs:
       - name: Run kubesec scan
         if: steps.find-manifests.outputs.manifests-found == 'true'
         run: |
-            CRITICAL_ISSUES_FOUND=false
-            TOTAL_FILES=0
-            FILES_WITH_CRITICAL=0
-            
+            echo "🔐 Checking for critical security issues..."
+      
             while IFS= read -r file; do
                 if [ -f "$file" ]; then
-                    TOTAL_FILES=$((TOTAL_FILES + 1))
-                    echo ""
                     echo "🔍 Checking: $file"
                     
                     # Run kubesec scan
@@ -95,30 +91,19 @@ jobs:
                     
                     if [ "$CRITICAL_COUNT" -gt 0 ]; then
                         echo "🚨 CRITICAL ISSUES FOUND in $file"
-                        FILES_WITH_CRITICAL=$((FILES_WITH_CRITICAL + 1))
-                        CRITICAL_ISSUES_FOUND=true
                         
                         # Show the critical issues
                         echo "$SCAN_OUTPUT" | jq -r '.[] | select(.scoring.critical != null) | .scoring.critical[] | "  🚨 \(.reason)"' 2>/dev/null || true
+                        
+                        echo "❌ CRITICAL SECURITY ISSUES DETECTED - FAILING WORKFLOW"
+                        exit 1  # Exit immediately - no need to check variables
                     else
                         echo "✅ No critical issues in $file"
                     fi
                 fi
             done < manifest-files.txt
             
-            echo ""
-            echo "📊 CRITICAL SECURITY SCAN SUMMARY"
-            echo "=================================="
-            echo "Total files scanned: $TOTAL_FILES"
-            echo "Files with critical issues: $FILES_WITH_CRITICAL"
-            
-            if [ "$CRITICAL_ISSUES_FOUND" = true ]; then
-                echo "❌ CRITICAL SECURITY ISSUES DETECTED"
-                echo "🔧 Fix all critical security issues before merging"
-                exit 1
-            else
-                echo "✅ No critical security issues found"
-            fi
+            echo "✅ No critical security issues found in any file"
 
       - name: Generate detailed report
         if: steps.find-manifests.outputs.manifests-found == 'true'
