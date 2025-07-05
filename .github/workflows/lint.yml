@@ -20,12 +20,10 @@ jobs:
             kubectl get pods --all-namespaces
 
       - name: Deploy
-        if: github.event.inputs.deploy_manifests != 'false'
         run: |
             kubectl create namespace httpbin
             sleep 20
-            pwd
-            ls -al
+            pwd && ls
             for file in k8s/*.yml k8s/*.yaml; do
             echo "apply $file <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<,"
                 if [ -f "$file" ]; then
