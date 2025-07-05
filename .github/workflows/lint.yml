@@ -31,10 +31,24 @@ jobs:
                 }
                 fi
             done
-      - name: Print out kube bench report summary
+
+            kubectl wait --for=condition=complete job/kube-bench --timeout=180s
+            kubectl logs job/kube-bench > kube-bench-raw-output.txt
+
+      - name: Process kube-bench report summary
         run: |
-          kubectl wait --for=condition=complete job/kube-bench --timeout=180s
-          kubectl logs job/kube-bench
+          # Run the processing script
+          ./scripts/process-kube-bench-results.sh kube-bench-raw-output.txt ./reports
+          
+      - name: Upload processed results
+        uses: actions/upload-artifact@v4
+        with:
+          name: kube-bench-security-reports
+          path: |
+            reports/
+            kube-bench-raw-output.txt
+            process-kube-bench-results.sh
+          
       - name: Set outputs
         id: cluster-info
         run: |
