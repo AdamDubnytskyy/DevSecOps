@@ -47,11 +47,9 @@ jobs:
             echo "cluster-name=test-cluster" >> $GITHUB_OUTPUT
             echo "cluster-ready=true" >> $GITHUB_OUTPUT
 
-  lint:
-    name: Lint
+  security-risk-analysis:
+    name: Security risk analysis for Kubernetes resources
     runs-on: ubuntu-24.04
-    needs: setup-test-cluster
-    if: needs.setup-test-cluster.outputs.cluster-ready == 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -62,27 +60,21 @@ jobs:
 
       - name: Install kubesec
         run: |
-            echo "🔽 Installing kubesec as Go package..."
             go install github.com/controlplaneio/kubesec/v2@v2.14.2
-
-            echo "🔍 Verifying kubesec installation..."
             kubesec version
 
       - name: Find Kubernetes manifests
         id: find-manifests
         run: |
-            echo "🔍 Finding Kubernetes manifests in k8s folder..."
-            
-            # Find all YAML files in k8s directory
             find k8s -name "*.yaml" -o -name "*.yml" > manifest-files.txt 2>/dev/null || true
             
             if [ -s manifest-files.txt ]; then
-            echo "manifests-found=true" >> $GITHUB_OUTPUT
-            echo "📋 Found Kubernetes manifests:"
-            cat manifest-files.txt
+              echo "manifests-found=true" >> $GITHUB_OUTPUT
+              echo "📋 Found Kubernetes manifests:"
+              cat manifest-files.txt
             else
-            echo "manifests-found=false" >> $GITHUB_OUTPUT
-            echo "❌ No Kubernetes manifests found in k8s folder"
+              echo "manifests-found=false" >> $GITHUB_OUTPUT
+              echo "❌ No Kubernetes manifests found in k8s folder"
             fi
         
       - name: Run kubesec scan
