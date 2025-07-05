@@ -38,6 +38,7 @@ jobs:
           kubectl get all -n httpbin
           kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
           POD_NAME=$(kubectl get pods -l app=httpbin -n httpbin -o jsonpath='{.items[0].metadata.name}')
+          echo $POD_NAME
           kubectl run test-curl \
             --image=curlimages/curl:latest \
             --rm -i --restart=Never \
