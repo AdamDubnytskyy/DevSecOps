@@ -23,7 +23,8 @@ jobs:
         run: |
             kubectl create namespace httpbin
             sleep 20
-            pwd && ls
+            pwd
+            ls
             for file in k8s/*.yml k8s/*.yaml; do
             echo "apply $file <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<,"
                 if [ -f "$file" ]; then
