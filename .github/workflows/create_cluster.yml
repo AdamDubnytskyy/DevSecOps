@@ -14,3 +14,18 @@ jobs:
             kubectl cluster-info
             kubectl get nodes -o wide
             kubectl get pods --all-namespaces
+
+      - name: Deploy manifests
+        if: github.event.inputs.deploy_manifests != 'false'
+        run: |
+            for file in k8s/*.yml k8s/*.yaml; do
+                if [ -f "$file" ]; then
+                kubectl apply -f "$file" || {
+                    echo "Failed to apply $file, continuing..."
+                }
+                fi
+            done
+            
+            sleep 30
+
+            kubectl get all --all-namespaces
