@@ -5,9 +5,48 @@ on:
       - main
   pull_request:
 jobs:
+  setup-test-cluster:
+    runs-on: ubuntu-latest
+    outputs:
+      cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
+      cluster-ready: ${{ steps.cluster-info.outputs.cluster-ready }}
+    steps:
+      - uses: helm/kind-action@v1
+
+      - name: Verify cluster
+        run: |
+            kubectl cluster-info
+            kubectl get nodes -o wide
+            kubectl get pods --all-namespaces
+
+      - name: Deploy
+        if: github.event.inputs.deploy_manifests != 'false'
+        run: |
+            kubectl create namespace httpbin
+            sleep 20
+            for file in k8s/*.yml k8s/*.yaml; do
+                if [ -f "$file" ]; then
+                kubectl apply -f "$file" || {
+                    echo "Failed to apply $file, continuing..."
+                }
+                fi
+            done
+            
+            sleep 30
+
+            kubectl get all --all-namespaces
+      - name: Set outputs
+        id: cluster-info
+        run: |
+            echo "cluster-name=test-cluster" >> $GITHUB_OUTPUT
+            echo "cluster-ready=true" >> $GITHUB_OUTPUT
+            
+
   lint:
     name: Lint
     runs-on: ubuntu-24.04
+    needs: setup-test-cluster
+    if: needs.setup-test-cluster.outputs.cluster-ready == 'true'
     steps:
       - uses: actions/checkout@v4
 
