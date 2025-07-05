@@ -193,22 +193,11 @@ jobs:
   kube-bench-scan:
     name: Kube Bench CIS Benchmark
     runs-on: ubuntu-24.04
+    needs: setup-test-cluster
+    if: needs.setup-test-cluster.outputs.cluster-ready == 'true'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install kube-bench
+      - name: kube-bench report
         run: |
-            echo "🔽 Installing kube-bench..."
-            curl -L https://github.com/aquasecurity/kube-bench/releases/download/v0.11.1/kube-bench_0.11.1_linux_amd64.tar.gz -o kube-bench.tar.gz
-            tar -xzf kube-bench.tar.gz
-            chmod +x kube-bench
-            sudo mv kube-bench /usr/local/bin/
-
-            echo "Verify kube-bench version"
-            kube-bench version
-
-      - name: Run kube-bench for manifest analysis
-        run: |            
-            # Create output directory
-            mkdir -p kube-bench-results
-            kube-bench --json > kube-bench-results/results.json 2>/dev/null
+            kubectl get po -n kube-bench
