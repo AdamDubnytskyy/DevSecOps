@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: httpbin-role
+  namespace: httpbin
+  labels:
+    app: httpbin
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: httpbin-rolebinding
+  namespace: httpbin
+  labels:
+    app: httpbin
+subjects:
+- kind: ServiceAccount
+  name: httpbin-sa
+  namespace: httpbin
+roleRef:
+  kind: Role
+  name: httpbin-role
+  apiGroup: rbac.authorization.k8s.io
