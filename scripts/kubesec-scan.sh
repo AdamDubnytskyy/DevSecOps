@@ -81,6 +81,7 @@ while IFS= read -r file; do
     echo
 done <<< "$YAML_FILES"
 
+cat $TEMP_REPORT
 # Cleanup
 rm -f "$TEMP_REPORT"
 
