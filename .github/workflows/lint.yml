@@ -19,6 +19,7 @@ jobs:
             kubectl get nodes -o wide
             kubectl get pods --all-namespaces
 
+      - uses: actions/checkout@v4
       - name: Deploy
         run: |
             kubectl create namespace httpbin
