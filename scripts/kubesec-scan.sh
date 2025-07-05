@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # kubesec-scan.sh - Scan Kubernetes manifests for critical security issues
-# Usage: ./kubesec-scan.sh [directory]
+# Usage: .scripts/kubesec-scan.sh [directory]
 
 set -e
 
@@ -41,16 +41,15 @@ if [[ -z "$YAML_FILES" ]]; then
 fi
 
 echo "Found $(echo "$YAML_FILES" | wc -l) YAML file(s) to scan"
-echo
 
-# Process each YAML file
+# Scan each YAML file
 while IFS= read -r file; do
     echo "📄 Scanning: $file"
     
-    # Run kubesec scan and capture output
-    
+    CRITICAL_ISSUES=$(kubesec scan "$file" 2>/dev/null | jq -e '.[0].scoring.critical')
     if kubesec scan "$file" | jq -e '.[0].scoring.critical | length > 0'; then
-        echo -e "${RED} ❌ $file has critical issues. Please resolve the listed issues."
+        echo -e "${RED} ❌ $file has critical issues. Please fix listed issues below."
+        echo "$CRITICAL_ISSUES" | jq -r '.[] | "• \(.id): \(.reason) (Points: \(.points))"'
         exit 1
     else
         # Check if the report is valid and contains scannable content
@@ -89,12 +88,5 @@ rm -f "$TEMP_REPORT"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Final summary
-if [[ "$CRITICAL_FOUND" == true ]]; then
-    echo -e "${RED}🚨 SCAN FAILED: Critical security issues found!${NC}"
-    echo "Please review and fix the critical issues above."
-    exit 1
-else
-    echo -e "${GREEN}✅ SCAN PASSED: No critical security issues found${NC}"
-    exit $EXIT_CODE
-fi
+echo -e "${GREEN}✅ SCAN PASSED: No critical security issues found${NC}"
+exit $EXIT_CODE
