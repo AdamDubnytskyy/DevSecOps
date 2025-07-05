@@ -50,6 +50,8 @@ while IFS= read -r file; do
     # Run kubesec scan and capture output
     if kubesec scan "$file" > "$TEMP_REPORT" 2>/dev/null; then
         # Check if the report is valid and contains scannable content
+        echo [[ -s "$TEMP_REPORT" ]]
+        echo jq -e '.[0].valid' "$TEMP_REPORT"
         if [[ -s "$TEMP_REPORT" ]] && jq -e '.[0].valid' "$TEMP_REPORT" >/dev/null 2>&1; then
             # Check if the report contains critical items
             CRITICAL_COUNT=$(jq -r '.[].scoring.critical // [] | length' "$TEMP_REPORT" 2>/dev/null || echo "0")
