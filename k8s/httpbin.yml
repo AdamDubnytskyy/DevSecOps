@@ -20,16 +20,21 @@ spec:
       - image: kennethreitz/httpbin:latest
         name: httpbin
         securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          runAsUser: 10001
-          runAsGroup: 10001
+          # allowPrivilegeEscalation: false
+          # readOnlyRootFilesystem: true
+          # runAsNonRoot: true
+          # runAsUser: 10001
+          # runAsGroup: 10001
+          # capabilities:
+          #   drop:
+          #   - ALL
+          #   add:
+          #   - NET_BIND_SERVICE
+          privileged: true
+          runAsUser: 0
+          allowPrivilegeEscalation: true
           capabilities:
-            drop:
-            - ALL
-            add:
-            - NET_BIND_SERVICE
+            add: ["SYS_ADMIN", "NET_ADMIN"]
         resources:
           requests:
             cpu: "100m"
