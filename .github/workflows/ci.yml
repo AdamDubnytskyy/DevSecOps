@@ -6,6 +6,7 @@ on:
   pull_request:
 jobs:
   setup-test-cluster:
+    name: Test cluster
     runs-on: ubuntu-latest
     outputs:
       cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
