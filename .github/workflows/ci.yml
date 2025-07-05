@@ -77,39 +77,47 @@ jobs:
       - name: Run kubesec scan
         if: steps.find-manifests.outputs.manifests-found == 'true'
         run: |
-            echo "🔐 Running kubesec security scan..."
-      
-            FAILED_FILES=0
+            CRITICAL_ISSUES_FOUND=false
+            TOTAL_FILES=0
+            FILES_WITH_CRITICAL=0
             
             while IFS= read -r file; do
                 if [ -f "$file" ]; then
-                    echo "🔍 Scanning: $file"
+                    TOTAL_FILES=$((TOTAL_FILES + 1))
+                    echo ""
+                    echo "🔍 Checking: $file"
                     
-                    # Get just the score directly
-                    SCORE=$(kubesec scan "$file" | jq '.[0].score // 0' 2>/dev/null || echo "0")
+                    # Run kubesec scan
+                    SCAN_OUTPUT=$(kubesec scan "$file" 2>/dev/null || echo "[]")
                     
-                    echo "Score for $file: $SCORE"
+                    # Check if critical array exists and has items
+                    CRITICAL_COUNT=$(echo "$SCAN_OUTPUT" | jq '[.[] | select(.scoring.critical != null and (.scoring.critical | length > 0))] | length' 2>/dev/null || echo "0")
                     
-                    if [[ "$SCORE" =~ ^-?[0-9]+$ ]] && [ "$SCORE" -lt 0 ]; then
-                        echo "❌ $file FAILED with score: $SCORE"
-                        FAILED_FILES=$((FAILED_FILES + 1))
-                    elif [[ "$SCORE" =~ ^-?[0-9]+$ ]] && [ "$SCORE" -ge 0 ]; then
-                        echo "✅ $file PASSED with score: $SCORE"
+                    if [ "$CRITICAL_COUNT" -gt 0 ]; then
+                        echo "🚨 CRITICAL ISSUES FOUND in $file"
+                        FILES_WITH_CRITICAL=$((FILES_WITH_CRITICAL + 1))
+                        CRITICAL_ISSUES_FOUND=true
+                        
+                        # Show the critical issues
+                        echo "$SCAN_OUTPUT" | jq -r '.[] | select(.scoring.critical != null) | .scoring.critical[] | "  🚨 \(.reason)"' 2>/dev/null || true
                     else
-                        echo "⚠️  $file SKIPPED (unsupported or invalid)"
+                        echo "✅ No critical issues in $file"
                     fi
                 fi
             done < manifest-files.txt
             
-            echo "📊 FINAL RESULT: $FAILED_FILES files failed"
+            echo ""
+            echo "📊 CRITICAL SECURITY SCAN SUMMARY"
+            echo "=================================="
+            echo "Total files scanned: $TOTAL_FILES"
+            echo "Files with critical issues: $FILES_WITH_CRITICAL"
             
-            if [ $FAILED_FILES -gt 1 ]; then
-                echo "❌ Workflow FAILED: Too many failures ($FAILED_FILES > 1)"
+            if [ "$CRITICAL_ISSUES_FOUND" = true ]; then
+                echo "❌ CRITICAL SECURITY ISSUES DETECTED"
+                echo "🔧 Fix all critical security issues before merging"
                 exit 1
-            elif [ $FAILED_FILES -eq 1 ]; then
-                echo "⚠️  Workflow WARNING: 1 failure (at threshold)"
             else
-                echo "✅ Workflow PASSED: No failures"
+                echo "✅ No critical security issues found"
             fi
 
       - name: Generate detailed report
