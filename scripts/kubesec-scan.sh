@@ -48,7 +48,11 @@ while IFS= read -r file; do
     echo "📄 Scanning: $file"
     
     # Run kubesec scan and capture output
-    if kubesec scan "$file" > "$TEMP_REPORT" 2>/dev/null; then
+    
+    if kubesec scan "$file" | jq -e '.[0].scoring.critical | length > 0'; then
+        echo -e "${RED} ❌ $file has critical issues. Please resolve the listed issues."
+        exit 1
+    else
         # Check if the report is valid and contains scannable content
         echo [[ -s "$TEMP_REPORT" ]]
         echo jq -e '.[0].valid' "$TEMP_REPORT"
@@ -76,8 +80,6 @@ while IFS= read -r file; do
         else
             echo -e "${YELLOW}⚠️  Skipped: Not a supported resource type for scanning${NC}"
         fi
-    else
-        echo -e "${YELLOW}⚠️  Skipped: Unable to scan (likely unsupported resource type)${NC}"
     fi
     
     echo
