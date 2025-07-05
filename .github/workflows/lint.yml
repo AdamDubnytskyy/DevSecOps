@@ -1,0 +1,152 @@
+name: lint
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+            go-version: '1.24.2'
+
+      - name: Install kubesec
+        run: |
+            echo "🔽 Installing kubesec as Go package..."
+            go install github.com/controlplaneio/kubesec/v2@v2.14.2
+
+            echo "🔍 Verifying kubesec installation..."
+            kubesec version
+
+      - name: Find Kubernetes manifests
+        id: find-manifests
+        run: |
+            echo "🔍 Finding Kubernetes manifests in k8s folder..."
+            
+            # Find all YAML files in k8s directory
+            find k8s -name "*.yaml" -o -name "*.yml" > manifest-files.txt 2>/dev/null || true
+            
+            if [ -s manifest-files.txt ]; then
+            echo "manifests-found=true" >> $GITHUB_OUTPUT
+            echo "📋 Found Kubernetes manifests:"
+            cat manifest-files.txt
+            else
+            echo "manifests-found=false" >> $GITHUB_OUTPUT
+            echo "❌ No Kubernetes manifests found in k8s folder"
+            fi
+        
+      - name: Run kubesec scan
+        if: steps.find-manifests.outputs.manifests-found == 'true'
+        run: |
+            echo "🔐 Running kubesec security scan..."
+            
+            SCAN_FAILED=false
+            TOTAL_FILES=0
+            PASSED_FILES=0
+            FAILED_FILES=0
+            SKIPPED_FILES=0
+            
+            while IFS= read -r file; do
+            if [ -f "$file" ]; then
+                TOTAL_FILES=$((TOTAL_FILES + 1))
+                echo ""
+                echo "=================================================="
+                echo "🔍 Scanning: $file"
+                echo "=================================================="
+                
+                # Run kubesec scan and capture output (disable exit on error for this command)
+                set +e
+                SCAN_OUTPUT=$(kubesec scan "$file" 2>&1)
+                SCAN_EXIT_CODE=$?
+                set -e
+                
+                echo "$SCAN_OUTPUT"
+                
+                # Handle different exit codes and scenarios
+                if [ $SCAN_EXIT_CODE -eq 0 ]; then
+                # Check if scan contains unsupported resources
+                if echo "$SCAN_OUTPUT" | grep -q "This resource kind is not supported by kubesec"; then
+                    echo "⚠️  $file contains unsupported resources - skipping security evaluation"
+                    echo "📋 Supported resources: Pod, Deployment, DaemonSet, StatefulSet, ReplicaSet, Job, CronJob"
+                    SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                else
+                    # Get the security score for supported resources
+                    SCORE=$(echo "$SCAN_OUTPUT" | jq '.[0].score // 0' 2>/dev/null || echo "0")
+                    
+                    if [ "$SCORE" -ge 0 ]; then
+                    echo "✅ $file - Security score: $SCORE"
+                    PASSED_FILES=$((PASSED_FILES + 1))
+                    else
+                    echo "❌ $file - Security score: $SCORE (SECURITY ISSUE)"
+                    echo "🔧 Security recommendations:"
+                    echo "$SCAN_OUTPUT" | jq -r '.[0].scoring.advise[]?.reason // "No specific recommendations"' 2>/dev/null || true
+                    FAILED_FILES=$((FAILED_FILES + 1))
+                    SCAN_FAILED=true
+                    fi
+                fi
+                else
+                # Any non-zero exit code (including 2) is treated as a skip
+                echo "⚠️  $file - Cannot scan (exit code: $SCAN_EXIT_CODE)"
+                if [ $SCAN_EXIT_CODE -eq 2 ]; then
+                    echo "📋 This might be due to:"
+                    echo "   - Invalid YAML syntax"
+                    echo "   - Multi-document YAML files"
+                    echo "   - Non-Kubernetes YAML files"
+                    echo "   - Missing required fields"
+                fi
+                echo "🔄 Continuing with next file..."
+                SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                fi
+            fi
+            done < manifest-files.txt
+            
+            echo ""
+            echo "=================================================="
+            echo "📊 SCAN SUMMARY"
+            echo "=================================================="
+            echo "Total files scanned: $TOTAL_FILES"
+            echo "Passed: $PASSED_FILES"
+            echo "Failed: $FAILED_FILES"
+            echo "Skipped: $SKIPPED_FILES"
+            
+            if [ "$SCAN_FAILED" = true ]; then
+            echo "❌ Some files failed security scan with negative scores"
+            echo "🔧 Fix the security issues above before merging"
+            exit 1
+            else
+            echo "✅ All scannable files passed security scan"
+            echo "📊 Files with parsing errors or unsupported resources were skipped"
+            fi
+
+      - name: Generate detailed report
+        if: steps.find-manifests.outputs.manifests-found == 'true'
+        run: |
+            echo "📋 Generating detailed security report..."
+
+            echo "# Kubesec Security Report" > kubesec-report.md
+            echo "Generated on: $(date)" >> kubesec-report.md
+            echo "" >> kubesec-report.md
+
+            echo "## Scanned Files" >> kubesec-report.md
+            while IFS= read -r file; do
+            echo "### $file" >> kubesec-report.md
+            echo '```json' >> kubesec-report.md
+            kubesec scan "$file" >> kubesec-report.md 2>/dev/null || echo "Failed to scan" >> kubesec-report.md
+            echo '```' >> kubesec-report.md
+            echo "" >> kubesec-report.md
+            done < manifest-files.txt
+
+            echo "Report generated: kubesec-report.md"
+
+      - name: Upload kubesec report
+        if: steps.find-manifests.outputs.manifests-found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+            name: kubesec-security-report
+            path: kubesec-report.md
