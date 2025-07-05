@@ -150,3 +150,20 @@ jobs:
         with:
             name: kubesec-security-report
             path: kubesec-report.md
+
+  kube-bench-scan:
+    name: Kube Bench CIS Benchmark
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kube-bench
+        run: |
+            echo "🔽 Installing kube-bench..."
+            curl -L https://github.com/aquasecurity/kube-bench/releases/latest/download/kube-bench_linux_amd64.tar.gz -o kube-bench.tar.gz
+            tar -xzf kube-bench.tar.gz
+            chmod +x kube-bench
+            sudo mv kube-bench /usr/local/bin/
+
+            echo "Verify kube-bench version"
+            kube-bench version
