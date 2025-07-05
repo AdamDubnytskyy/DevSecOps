@@ -78,7 +78,7 @@ jobs:
         if: steps.find-manifests.outputs.manifests-found == 'true'
         run: |
             echo "🔐 Running kubesec security scan..."
-            
+      
             SCAN_FAILED=false
             TOTAL_FILES=0
             PASSED_FILES=0
@@ -93,7 +93,7 @@ jobs:
                 echo "🔍 Scanning: $file"
                 echo "=================================================="
                 
-                # Run kubesec scan and capture output (disable exit on error for this command)
+                # Run kubesec scan and capture output
                 set +e
                 SCAN_OUTPUT=$(kubesec scan "$file" 2>&1)
                 SCAN_EXIT_CODE=$?
@@ -103,38 +103,53 @@ jobs:
                 
                 # Handle different exit codes and scenarios
                 if [ $SCAN_EXIT_CODE -eq 0 ]; then
-                # Check if scan contains unsupported resources
-                if echo "$SCAN_OUTPUT" | grep -q "This resource kind is not supported by kubesec"; then
-                    echo "⚠️  $file contains unsupported resources - skipping security evaluation"
-                    echo "📋 Supported resources: Pod, Deployment, DaemonSet, StatefulSet, ReplicaSet, Job, CronJob"
-                    SKIPPED_FILES=$((SKIPPED_FILES + 1))
-                else
-                    # Get the security score for supported resources
-                    SCORE=$(echo "$SCAN_OUTPUT" | jq '.[0].score // 0' 2>/dev/null || echo "0")
-                    
-                    if [ "$SCORE" -ge 0 ]; then
-                    echo "✅ $file - Security score: $SCORE"
-                    PASSED_FILES=$((PASSED_FILES + 1))
+                    # Check if scan contains unsupported resources
+                    if echo "$SCAN_OUTPUT" | grep -q "This resource kind is not supported by kubesec"; then
+                        echo "⚠️  $file contains unsupported resources - skipping security evaluation"
+                        echo "📋 Supported resources: Pod, Deployment, DaemonSet, StatefulSet, ReplicaSet, Job, CronJob"
+                        SKIPPED_FILES=$((SKIPPED_FILES + 1))
                     else
-                    echo "❌ $file - Security score: $SCORE (SECURITY ISSUE)"
-                    echo "🔧 Security recommendations:"
-                    echo "$SCAN_OUTPUT" | jq -r '.[0].scoring.advise[]?.reason // "No specific recommendations"' 2>/dev/null || true
-                    FAILED_FILES=$((FAILED_FILES + 1))
-                    SCAN_FAILED=true
+                        # Get the security score for supported resources
+                        SCORE=$(echo "$SCAN_OUTPUT" | jq '.[0].score // 0' 2>/dev/null || echo "0")
+                        
+                        echo "📊 Extracted score: $SCORE"
+                        
+                        # Check if score is a valid number
+                        if ! [[ "$SCORE" =~ ^-?[0-9]+$ ]]; then
+                            echo "⚠️  Invalid score format, treating as skipped"
+                            SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                        elif [ "$SCORE" -ge 0 ]; then
+                            echo "✅ $file - Security score: $SCORE"
+                            PASSED_FILES=$((PASSED_FILES + 1))
+                        else
+                            echo "❌ $file - Security score: $SCORE (CRITICAL SECURITY ISSUES)"
+                            echo "🔧 Security recommendations:"
+                            echo "$SCAN_OUTPUT" | jq -r '.[0].scoring.critical[]?.reason // "No specific recommendations"' 2>/dev/null || true
+                            echo "$SCAN_OUTPUT" | jq -r '.[0].scoring.advise[]?.reason // "No specific recommendations"' 2>/dev/null || true
+                            FAILED_FILES=$((FAILED_FILES + 1))
+                            SCAN_FAILED=true
+                        fi
                     fi
-                fi
+                elif [ $SCAN_EXIT_CODE -eq 2 ]; then
+                    # Check if it's actually unsupported resource with exit code 2
+                    if echo "$SCAN_OUTPUT" | grep -q "This resource kind is not supported by kubesec"; then
+                        echo "⚠️  $file contains unsupported resources - skipping security evaluation"
+                        echo "📋 Supported resources: Pod, Deployment, DaemonSet, StatefulSet, ReplicaSet, Job, CronJob"
+                        SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                    else
+                        echo "⚠️  $file - Cannot scan (exit code: $SCAN_EXIT_CODE)"
+                        echo "📋 This might be due to:"
+                        echo "   - Invalid YAML syntax"
+                        echo "   - Multi-document YAML files"
+                        echo "   - Non-Kubernetes YAML files"
+                        echo "   - Missing required fields"
+                        echo "🔄 Continuing with next file..."
+                        SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                    fi
                 else
-                # Any non-zero exit code (including 2) is treated as a skip
-                echo "⚠️  $file - Cannot scan (exit code: $SCAN_EXIT_CODE)"
-                if [ $SCAN_EXIT_CODE -eq 2 ]; then
-                    echo "📋 This might be due to:"
-                    echo "   - Invalid YAML syntax"
-                    echo "   - Multi-document YAML files"
-                    echo "   - Non-Kubernetes YAML files"
-                    echo "   - Missing required fields"
-                fi
-                echo "🔄 Continuing with next file..."
-                SKIPPED_FILES=$((SKIPPED_FILES + 1))
+                    echo "⚠️  $file - Cannot scan (exit code: $SCAN_EXIT_CODE)"
+                    echo "🔄 Continuing with next file..."
+                    SKIPPED_FILES=$((SKIPPED_FILES + 1))
                 fi
             fi
             done < manifest-files.txt
@@ -148,28 +163,20 @@ jobs:
             echo "Failed: $FAILED_FILES"
             echo "Skipped: $SKIPPED_FILES"
             
-            if [ "$SCAN_FAILED" = true ]; then
-              echo "❌ Some files failed security scan with negative scores"
-              echo "🔧 Fix the security issues above before merging"
-            exit 1
-            else
-              echo "✅ All scannable files passed security scan"
-              echo "📊 Files with parsing errors or unsupported resources were skipped"
-            fi
-
+            # Check if failed files exceed threshold
             if [ $FAILED_FILES -gt 1 ]; then
-              echo "❌ Security scan failed: $FAILED_FILES files failed (threshold: 1)"
-              echo "🔧 Fix the security issues above before merging"
-              echo "📋 Maximum allowed failures: 1"
-              echo "📋 Current failures: $FAILED_FILES"
-              exit 1
+                echo "❌ Security scan failed: $FAILED_FILES files failed (threshold: 1)"
+                echo "🔧 Fix the security issues above before merging"
+                echo "📋 Maximum allowed failures: 1"
+                echo "📋 Current failures: $FAILED_FILES"
+                exit 1
             elif [ $FAILED_FILES -eq 1 ]; then
-              echo "⚠️  Security scan warning: $FAILED_FILES file failed (at threshold)"
-              echo "📋 Consider fixing the security issue, but allowing workflow to continue"
-              echo "✅ Workflow continues as failure count is within threshold"
+                echo "⚠️  Security scan warning: $FAILED_FILES file failed (at threshold)"
+                echo "📋 Consider fixing the security issue, but allowing workflow to continue"
+                echo "✅ Workflow continues as failure count is within threshold"
             else
-              echo "✅ All scannable files passed security scan"
-              echo "📊 Files with parsing errors or unsupported resources were skipped"
+                echo "✅ All scannable files passed security scan"
+                echo "📊 Files with parsing errors or unsupported resources were skipped"
             fi
 
       - name: Generate detailed report
