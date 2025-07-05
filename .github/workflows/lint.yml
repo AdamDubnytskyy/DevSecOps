@@ -23,11 +23,8 @@ jobs:
       - name: Deploy
         run: |
             kubectl create namespace httpbin
-            sleep 20
-            pwd
-            ls -al
+
             for file in k8s/*.yml; do
-            echo "apply $file <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<,"
                 if [ -f "$file" ]; then
                 kubectl apply -f "$file" || {
                     echo "Failed to apply $file, continuing..."
