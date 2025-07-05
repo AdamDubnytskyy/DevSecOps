@@ -42,7 +42,7 @@ jobs:
             echo "cluster-ready=true" >> $GITHUB_OUTPUT
       - name: kube-bench report
         run: |
-            kubectl get po -n kube-bench
+            kubectl get po,cj -n default
 
   lint:
     name: Lint
