@@ -32,9 +32,11 @@ jobs:
                 fi
             done
             
-            sleep 30
+            kubectl wait --for=condition=Ready pod -l app=kube-bench --timeout=300s
 
             kubectl get all --all-namespaces
+            POD_NAME=$(kubectl get pods -l app=kube-bench -o jsonpath='{.items[0].metadata.name}')
+            kubectl logs -f "$POD_NAME"
       - name: Set outputs
         id: cluster-info
         run: |
