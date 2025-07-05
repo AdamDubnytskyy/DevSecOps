@@ -1,4 +1,4 @@
-name: Create Cluster
+name: Create test cluster
 
 on: pull_request
 
@@ -6,8 +6,7 @@ jobs:
   create-cluster:
     runs-on: ubuntu-latest
     steps:
-      - name: Create k8s Kind Cluster
-        uses: helm/kind-action@v1
+      - uses: helm/kind-action@v1
 
       - name: Verify cluster
         run: |
