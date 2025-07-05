@@ -82,7 +82,6 @@ while IFS= read -r file; do
         fi
     fi
     
-    echo
 done <<< "$YAML_FILES"
 
 cat $TEMP_REPORT
