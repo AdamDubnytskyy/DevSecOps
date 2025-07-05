@@ -18,6 +18,7 @@ jobs:
         if: github.event.inputs.deploy_manifests != 'false'
         run: |
             kubectl create namespace httpbin
+            sleep 20
             for file in k8s/*.yml k8s/*.yaml; do
                 if [ -f "$file" ]; then
                 kubectl apply -f "$file" || {
