@@ -39,7 +39,7 @@ jobs:
           kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
           kubectl get all -n httpbin
           POD_NAME=$(kubectl get pods -l app=httpbin -n httpbin -o jsonpath='{.items[0].metadata.name}')
-          kubectl logs POD_NAME -n httpbin
+          kubectl logs $POD_NAME -n httpbin
           
           POD_IP=$(kubectl get pod -l app=httpbin -n httpbin -o jsonpath='{.items[0].status.podIP}')
           echo $POD_IP
