@@ -167,3 +167,9 @@ jobs:
 
             echo "Verify kube-bench version"
             kube-bench version
+
+      - name: Run kube-bench for manifest analysis
+        run: |            
+            # Create output directory
+            mkdir -p kube-bench-results
+            kube-bench --json > kube-bench-results/results.json 2>/dev/null
