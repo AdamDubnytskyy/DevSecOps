@@ -1,5 +1,7 @@
 # DevSecOps lab
 
+![DevSecOps release (latest SemVer)](https://img.shields.io/github/v/tag/AdamDubnytskyy/DevSecOps?sort=semver)
+
 ## Prerequisites
 1. running kubernetes cluster. See [control-plane-ref](https://github.com/AdamDubnytskyy/k8s-controller/blob/main/docs/control-plane/README.md) to spin up kubernetes cluster for dev environment.
 
