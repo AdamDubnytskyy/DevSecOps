@@ -36,7 +36,7 @@ jobs:
       - name: Verify deployment status is Ready
         run: |
           kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
-          echo "Deployment is ready"
+          echo "Deployment is up & running"
 
       - name: Set outputs
         id: cluster-info
@@ -149,12 +149,27 @@ jobs:
             echo "Skipped: $SKIPPED_FILES"
             
             if [ "$SCAN_FAILED" = true ]; then
-            echo "❌ Some files failed security scan with negative scores"
-            echo "🔧 Fix the security issues above before merging"
+              echo "❌ Some files failed security scan with negative scores"
+              echo "🔧 Fix the security issues above before merging"
             exit 1
             else
-            echo "✅ All scannable files passed security scan"
-            echo "📊 Files with parsing errors or unsupported resources were skipped"
+              echo "✅ All scannable files passed security scan"
+              echo "📊 Files with parsing errors or unsupported resources were skipped"
+            fi
+
+            if [ $FAILED_FILES -gt 1 ]; then
+              echo "❌ Security scan failed: $FAILED_FILES files failed (threshold: 1)"
+              echo "🔧 Fix the security issues above before merging"
+              echo "📋 Maximum allowed failures: 1"
+              echo "📋 Current failures: $FAILED_FILES"
+              exit 1
+            elif [ $FAILED_FILES -eq 1 ]; then
+              echo "⚠️  Security scan warning: $FAILED_FILES file failed (at threshold)"
+              echo "📋 Consider fixing the security issue, but allowing workflow to continue"
+              echo "✅ Workflow continues as failure count is within threshold"
+            else
+              echo "✅ All scannable files passed security scan"
+              echo "📊 Files with parsing errors or unsupported resources were skipped"
             fi
 
       - name: Generate detailed report
