@@ -34,6 +34,7 @@ jobs:
 
       - name: Test httpbin GET endpoint
         run: |
+          kubectl get all -n httpbin
           kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
           POD_NAME=$(kubectl get pods -l app=httpbin -n httpbin -o jsonpath='{.items[0].metadata.name}')
           kubectl exec -n httpbin "$POD_NAME" -- curl -s -f http://localhost:80/get || {
