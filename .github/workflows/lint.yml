@@ -31,11 +31,10 @@ jobs:
                 }
                 fi
             done
-            
-            kubectl wait --for=condition=complete job/kube-bench --timeout=180s
-
-            kubectl get all --all-namespaces
-            kubectl logs job/kube-bench
+      - name: Print out kube bench report summary
+        run: |
+          kubectl wait --for=condition=complete job/kube-bench --timeout=180s
+          kubectl logs job/kube-bench
       - name: Set outputs
         id: cluster-info
         run: |
