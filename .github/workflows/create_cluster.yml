@@ -14,9 +14,10 @@ jobs:
             kubectl get nodes -o wide
             kubectl get pods --all-namespaces
 
-      - name: Deploy manifests
+      - name: Deploy
         if: github.event.inputs.deploy_manifests != 'false'
         run: |
+            kubectl create namespace httpbin
             for file in k8s/*.yml k8s/*.yaml; do
                 if [ -f "$file" ]; then
                 kubectl apply -f "$file" || {
