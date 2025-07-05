@@ -40,7 +40,9 @@ jobs:
         run: |
             echo "cluster-name=test-cluster" >> $GITHUB_OUTPUT
             echo "cluster-ready=true" >> $GITHUB_OUTPUT
-            
+      - name: kube-bench report
+        run: |
+            kubectl get po -n kube-bench
 
   lint:
     name: Lint
@@ -189,15 +191,3 @@ jobs:
         with:
             name: kubesec-security-report
             path: kubesec-report.md
-
-  kube-bench-scan:
-    name: Kube Bench CIS Benchmark
-    runs-on: ubuntu-24.04
-    needs: setup-test-cluster
-    if: needs.setup-test-cluster.outputs.cluster-ready == 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: kube-bench report
-        run: |
-            kubectl get po -n kube-bench
