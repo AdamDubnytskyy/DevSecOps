@@ -1,6 +1,6 @@
 {
   "name": "DevSecOps labs",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "DevSecOps hands-on labs",
   "scripts": {
     "publish": "git push --follow-tags"
