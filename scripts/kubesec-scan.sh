@@ -7,7 +7,6 @@ set -e
 
 SCAN_DIR="${1:-.}"
 CRITICAL_FOUND=false
-TEMP_REPORT=$(mktemp)
 EXIT_CODE=0
 
 # Colors for output
@@ -41,24 +40,22 @@ if [[ -z "$YAML_FILES" ]]; then
 fi
 
 echo "Found $(echo "$YAML_FILES" | wc -l) YAML file(s) to scan"
-
+echo "scanning $YAML_FILES"
 # Scan each YAML file
 while IFS= read -r file; do
     echo "📄 Scanning: $file"
     
-    CRITICAL_ISSUES=$(kubesec scan "$file" 2>/dev/null | jq -e '.[0].scoring.critical')
-    if kubesec scan "$file" | jq -e '.[0].scoring.critical | length > 0'; then
+    CRITICAL_ISSUES=$(kubesec scan "$file" 2>/dev/null | jq -e '.[0].scoring.critical' 2>/dev/null || true)
+
+    if kubesec scan "$file" | jq -e '.[0].scoring.critical | length > 0' >/dev/null; then
         echo -e "${RED} ❌ $file has critical issues. Please fix listed issues below."
         echo "$CRITICAL_ISSUES" | jq -r '.[] | "• \(.id): \(.reason) (Points: \(.points))"'
         exit 1
     else
         echo -e "${GREEN} There are no critical issues."
     fi
-    
-done <<< "$YAML_FILES"
 
-# Cleanup
-rm -f "$TEMP_REPORT"
+done <<< "$YAML_FILES"
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
