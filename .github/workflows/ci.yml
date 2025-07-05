@@ -5,45 +5,6 @@ on:
       - main
   pull_request:
 jobs:
-  setup-test-cluster:
-    name: Test cluster
-    runs-on: ubuntu-latest
-    outputs:
-      cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
-      cluster-ready: ${{ steps.cluster-info.outputs.cluster-ready }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: helm/kind-action@v1
-
-      - name: Verify cluster
-        run: |
-            kubectl cluster-info
-            kubectl get nodes -o wide
-            kubectl get pods --all-namespaces
-
-      - name: Deploy
-        run: |
-            kubectl create namespace httpbin
-
-            for file in k8s/*.yml; do
-                if [ -f "$file" ]; then
-                kubectl apply -f "$file" || {
-                    echo "Failed to apply $file, continuing..."
-                }
-                fi
-            done
-
-      - name: Verify deployment status is Ready
-        run: |
-          kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
-          echo "Deployment is up & running"
-
-      - name: Set outputs
-        id: cluster-info
-        run: |
-            echo "cluster-name=test-cluster" >> $GITHUB_OUTPUT
-            echo "cluster-ready=true" >> $GITHUB_OUTPUT
-
   security-risk-analysis:
     name: Security risk analysis for Kubernetes resources
     runs-on: ubuntu-24.04
@@ -105,3 +66,43 @@ jobs:
         with:
             name: kubesec-security-report
             path: kubesec-report.md
+
+  setup-test-cluster:
+    name: Test cluster
+    runs-on: ubuntu-latest
+    needs: security-risk-analysis
+    outputs:
+      cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
+      cluster-ready: ${{ steps.cluster-info.outputs.cluster-ready }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1
+
+      - name: Verify cluster
+        run: |
+            kubectl cluster-info
+            kubectl get nodes -o wide
+            kubectl get pods --all-namespaces
+
+      - name: Deploy
+        run: |
+            kubectl create namespace httpbin
+
+            for file in k8s/*.yml; do
+                if [ -f "$file" ]; then
+                kubectl apply -f "$file" || {
+                    echo "Failed to apply $file, continuing..."
+                }
+                fi
+            done
+
+      - name: Verify deployment status is Ready
+        run: |
+          kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
+          echo "Deployment is up & running"
+
+      - name: Set outputs
+        id: cluster-info
+        run: |
+            echo "cluster-name=test-cluster" >> $GITHUB_OUTPUT
+            echo "cluster-ready=true" >> $GITHUB_OUTPUT
