@@ -11,6 +11,7 @@ jobs:
       cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
       cluster-ready: ${{ steps.cluster-info.outputs.cluster-ready }}
     steps:
+      - uses: actions/checkout@v4
       - uses: helm/kind-action@v1
 
       - name: Verify cluster
@@ -19,7 +20,6 @@ jobs:
             kubectl get nodes -o wide
             kubectl get pods --all-namespaces
 
-      - uses: actions/checkout@v4
       - name: Deploy
         run: |
             kubectl create namespace httpbin
