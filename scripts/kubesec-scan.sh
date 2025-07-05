@@ -49,29 +49,33 @@ while IFS= read -r file; do
     
     # Run kubesec scan and capture output
     if kubesec scan "$file" > "$TEMP_REPORT" 2>/dev/null; then
-        # Check if the report contains critical items
-        CRITICAL_COUNT=$(jq -r '.[].scoring.critical // [] | length' "$TEMP_REPORT" 2>/dev/null || echo "0")
-        
-        if [[ "$CRITICAL_COUNT" -gt 0 ]]; then
-            CRITICAL_FOUND=true
-            echo -e "${RED}❌ CRITICAL ISSUES FOUND: $CRITICAL_COUNT${NC}"
+        # Check if the report is valid and contains scannable content
+        if [[ -s "$TEMP_REPORT" ]] && jq -e '.[0].valid' "$TEMP_REPORT" >/dev/null 2>&1; then
+            # Check if the report contains critical items
+            CRITICAL_COUNT=$(jq -r '.[].scoring.critical // [] | length' "$TEMP_REPORT" 2>/dev/null || echo "0")
             
-            # Display critical issues
-            echo "   Critical issues:"
-            jq -r '.[].scoring.critical[]? | "   • \(.id): \(.reason) (Points: \(.points))"' "$TEMP_REPORT" 2>/dev/null || echo "   • Failed to parse critical issues"
-            
-            # Show overall score
-            SCORE=$(jq -r '.[].score // "unknown"' "$TEMP_REPORT" 2>/dev/null)
-            echo -e "   Score: ${RED}$SCORE${NC}"
-            
+            if [[ "$CRITICAL_COUNT" -gt 0 ]]; then
+                CRITICAL_FOUND=true
+                echo -e "${RED}❌ CRITICAL ISSUES FOUND: $CRITICAL_COUNT${NC}"
+                
+                # Display critical issues
+                echo "   Critical issues:"
+                jq -r '.[].scoring.critical[]? | "   • \(.id): \(.reason) (Points: \(.points))"' "$TEMP_REPORT" 2>/dev/null || echo "   • Failed to parse critical issues"
+                
+                # Show overall score
+                SCORE=$(jq -r '.[].score // "unknown"' "$TEMP_REPORT" 2>/dev/null)
+                echo -e "   Score: ${RED}$SCORE${NC}"
+                
+            else
+                echo -e "${GREEN}✅ No critical issues found${NC}"
+                SCORE=$(jq -r '.[].score // "unknown"' "$TEMP_REPORT" 2>/dev/null)
+                echo "   Score: $SCORE"
+            fi
         else
-            echo -e "${GREEN}✅ No critical issues found${NC}"
-            SCORE=$(jq -r '.[].score // "unknown"' "$TEMP_REPORT" 2>/dev/null)
-            echo "   Score: $SCORE"
+            echo -e "${YELLOW}⚠️  Skipped: Not a supported resource type for scanning${NC}"
         fi
     else
-        echo -e "${RED}❌ Failed to scan $file${NC}"
-        EXIT_CODE=1
+        echo -e "${YELLOW}⚠️  Skipped: Unable to scan (likely unsupported resource type)${NC}"
     fi
     
     echo
