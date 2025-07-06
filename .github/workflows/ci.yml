@@ -74,6 +74,10 @@ jobs:
     outputs:
       cluster-name: ${{ steps.cluster-info.outputs.cluster-name }}
       cluster-ready: ${{ steps.cluster-info.outputs.cluster-ready }}
+    env:
+      EXPECTED: "3"
+      NAMESPACE: "httpbin"
+      LABEL_SELECTOR: "app=httpbin"
     steps:
       - uses: actions/checkout@v4
       - uses: helm/kind-action@v1
@@ -102,8 +106,7 @@ jobs:
 
       - name: Verify deployment status is Ready
         run: |
-          kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=500s
-          echo "Deployment is up & running"
+          ./scripts/deployment_status_check.sh $EXPECTED $NAMESPACE $LABEL_SELECTOR
 
       - name: Set outputs
         id: cluster-info
