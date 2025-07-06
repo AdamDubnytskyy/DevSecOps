@@ -6,7 +6,7 @@ metadata:
   name: httpbin
   namespace: httpbin
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: httpbin
@@ -62,7 +62,7 @@ spec:
           mountPath: /home/httpbin
       affinity:
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:  # Soft rule
+          preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
             podAffinityTerm:
               labelSelector:

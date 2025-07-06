@@ -102,6 +102,8 @@ jobs:
 
       - name: Verify deployment status is Ready
         run: |
+          kubectl get po,deploy -A
+          sleep 200
           kubectl wait --for=condition=Ready pod -l app=httpbin -n httpbin --timeout=300s
           echo "Deployment is up & running"
 
