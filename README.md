@@ -10,4 +10,4 @@
 
 [Step 2](docs/step2-ensure-deployment-even-distribution-across-cluster/README.md). Ensure the deployment is evenly distributed across the cluster. ✅
 
-[Step 3](docs/step3-follow-security-best-practices/README.md). Follow Kubernetes, container, and security best practices.
+[Step 3](docs/step3-follow-security-best-practices/README.md). Follow Kubernetes, container, and security best practices. ✅
