@@ -5,15 +5,25 @@ EXPECTED=$1
 NAMESPACE=${2:-httpbin}
 LABEL_SELECTOR=${3:-app=httpbin}
 
-echo "EXPECTED: ${EXPECTED}"
-echo "NAMESPACE: ${NAMESPACE}"
-echo "LABEL_SELECTOR: ${LABEL_SELECTOR}"
+TIMEOUT=120  # seconds
+INTERVAL=5  # seconds between checks
+ELAPSED=0
 
-RUNNING=$(kubectl get pods -n "$NAMESPACE" -l "$LABEL_SELECTOR" --field-selector=status.phase=Running --no-headers | wc -l)
+kubectl get po -n $NAMESPACE
+while true; do
+    RUNNING=$(kubectl get pods -n "$NAMESPACE" -l "$LABEL_SELECTOR" --field-selector=status.phase=Running --no-headers | wc -l)
+    echo "Currently running pods: $RUNNING"
 
-if [ "$RUNNING" -ne "$EXPECTED" ]; then
-  echo "Error: Expected $EXPECTED running pods, but found $RUNNING"
-  exit 1
-else
-  echo "Success: All $EXPECTED pods are running."
-fi
+    if [ "$RUNNING" -eq "$EXPECTED" ]; then
+        echo "Success: All $EXPECTED pods are running."
+        break
+    fi
+
+    if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+        echo "Error: Timeout after $TIMEOUT seconds. Only $RUNNING/$EXPECTED pods are running."
+        exit 1
+    fi
+
+    sleep $INTERVAL
+    ELAPSED=$((ELAPSED + INTERVAL))
+done
