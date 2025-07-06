@@ -77,6 +77,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: helm/kind-action@v1
+        with:
+          version: v0.23.0
+          cluster_name: ci
+          config: test_cluster.yml
 
       - name: Verify cluster
         run: |

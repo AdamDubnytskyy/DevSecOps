@@ -6,7 +6,7 @@ metadata:
   name: httpbin
   namespace: httpbin
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: httpbin
@@ -62,10 +62,14 @@ spec:
           mountPath: /home/httpbin
       affinity:
         podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:  # Soft rule
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app: httpbin
-              topologyKey: kubernetes.io/hostname
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: httpbin
+            topologyKey: kubernetes.io/hostname
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:  # Only schedule on worker nodes
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: DoesNotExist
