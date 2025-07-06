@@ -81,6 +81,7 @@ jobs:
           version: v0.23.0
           cluster_name: ci
           wait: 120s
+          config: test_cluster.yml
 
       - name: Verify cluster
         run: |
