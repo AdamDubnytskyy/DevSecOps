@@ -27,3 +27,19 @@ After fixing critical issues, CI workflow continues running:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ SCAN PASSED: No critical security issues found
 ```
+
+Full `kubesec-security-report` can be downloaded via one of options:
+- [latest uploaded artifact](https://github.com/AdamDubnytskyy/DevSecOps/actions/runs/16102760047/artifacts/3472887391)
+- [REST API endpoints for GitHub Actions artifacts](https://docs.github.com/en/rest/actions/artifacts?apiVersion=2022-11-28)
+
+    E.g.:
+    ```sh
+    /repos/{owner}/{repo}/actions/artifacts
+
+    curl -L \
+        -H "Accept: application/vnd.github+json" \
+        -H "Authorization: Bearer <YOUR-TOKEN>" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        https://api.github.com/repos/AdamDubnytskyy/DevSecOps/actions/artifacts
+
+    ``` 
